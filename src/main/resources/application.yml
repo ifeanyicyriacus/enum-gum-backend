@@ -27,7 +27,7 @@ spring:
 #    baseline-on-migrate: true
 #
 #  security:
-#    user:
+#    userId:
 #      password: dummy  # Will be disabled in custom config
 #
 #management:
