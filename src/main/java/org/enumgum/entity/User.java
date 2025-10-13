@@ -2,7 +2,6 @@ package org.enumgum.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.enumgum.domain.constant.Role;
 
 @Entity
 @Table(name = "users")
@@ -13,23 +12,13 @@ import org.enumgum.domain.constant.Role;
 @Builder
 public class User extends BaseEntity {
 
-    @Column(unique = true, nullable = false)
-    private String email;
+  @Column(unique = true, nullable = false, length = 320)
+  private String email;
 
-    @Column(nullable = false)
-    private String passwordHash;
+  @Column(nullable = false)
+  private String password;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean verified = false;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean active = true;
-
-
+  @Column(nullable = false)
+  @Builder.Default
+  private Boolean verified = false;
 }
