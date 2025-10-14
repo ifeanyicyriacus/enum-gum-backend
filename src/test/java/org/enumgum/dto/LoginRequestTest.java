@@ -1,7 +1,6 @@
 package org.enumgum.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -16,6 +15,7 @@ class LoginRequestTest {
 
   @BeforeEach
   void setUp() {
+      //try with resource
     validator = Validation.buildDefaultValidatorFactory().getValidator();
   }
 
@@ -47,6 +47,7 @@ class LoginRequestTest {
     LoginRequest request = new LoginRequest("test@example.com", "");
     Set<ConstraintViolation<LoginRequest>> violations = validator.validate(request);
     assertThat(violations).hasSize(2);
-    assertThat(violations.iterator().next().getMessage()).isEqualTo("Password is required");
+    assertThat(violations.iterator().next().getMessage())
+        .isEqualTo("Password must be at least 8 characters");
   }
 }
