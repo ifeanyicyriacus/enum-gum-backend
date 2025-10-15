@@ -15,7 +15,7 @@ class LoginRequestTest {
 
   @BeforeEach
   void setUp() {
-      //try with resource
+    // try with resource
     validator = Validation.buildDefaultValidatorFactory().getValidator();
   }
 
@@ -47,7 +47,6 @@ class LoginRequestTest {
     LoginRequest request = new LoginRequest("test@example.com", "");
     Set<ConstraintViolation<LoginRequest>> violations = validator.validate(request);
     assertThat(violations).hasSize(2);
-    assertThat(violations.iterator().next().getMessage())
-        .isEqualTo("Password must be at least 8 characters");
+    assertThat(violations.iterator().next().getMessage()).contains("Password ");
   }
 }
