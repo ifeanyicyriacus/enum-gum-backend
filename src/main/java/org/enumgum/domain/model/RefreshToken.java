@@ -9,7 +9,7 @@ import lombok.*;
 import org.enumgum.entity.BaseEntity;
 
 @Entity
-@Table(name = "refresh_token")
+@Table(name = "refresh_tokens")
 @Getter
 @Setter
 @NoArgsConstructor
