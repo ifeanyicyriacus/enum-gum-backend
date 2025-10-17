@@ -17,9 +17,4 @@ public class SecurityConfig {
         .addFilterBefore(new TraceFilter(), UsernamePasswordAuthenticationFilter.class)
         .build();
   }
-
-  //  @Bean
-  //  public TokenProvider tokenProvider(JwtSecretConfig cfg) {
-  //    return new JwtTokenProvider(cfg, Clock.systemUTC());
-  //  }
 }

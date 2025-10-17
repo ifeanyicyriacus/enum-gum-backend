@@ -1,46 +1,41 @@
 package org.enumgum.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;
 import java.time.Instant;
 import java.util.Date;
-import org.enumgum.entity.User;
-import org.enumgum.repository.UserRepository;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.util.ReflectionTestUtils;
 
-@DataJpaTest
 class TokenProviderTest {
-  private TokenProvider2 tokenProvider;
-  private String testSecret = "1234567890123456789012345678901234567890123456789012345678901234";
-  private User testUser;
+  private JwtTokenProvider tokenProvider;
+  private final String testSecret =
+      "1234567890123456789012345678901234567890123456789012345678901234";
 
-  @Autowired private UserRepository userRepo;
+  private final String email = "a@b.com";
+  private final String role = "ADMIN";
+  private final UUID orgId = UUID.randomUUID();
+  private final UUID userId = UUID.randomUUID();
+  private final UUID familyId = UUID.randomUUID();
 
   @BeforeEach
   void setUp() {
     // We'll create the TokenProvider instance and inject the secret via reflection for testing
-    tokenProvider = new TokenProvider2();
+    tokenProvider = new JwtTokenProvider();
     ReflectionTestUtils.setField(tokenProvider, "secret", testSecret);
-
-    testUser =
-        User.builder().email("test@example.com").password("password").verified(false).build();
-    testUser = userRepo.save(testUser);
-    assertThat(testUser).isNotNull();
   }
 
   @Test
   void shouldGenerateValidAccessToken() {
     // When
-    String token = tokenProvider.generateAccessToken(testUser);
-      System.out.println("Token: " + token);
+    String token = tokenProvider.generateAccessToken(userId, email, orgId, role);
     // Then
     assertThat(token).isNotBlank();
     // Basic JWT structure check (header.payload.signature)
@@ -51,20 +46,19 @@ class TokenProviderTest {
     Jws<Claims> claimsJws = tokenProvider.parseToken(token, testSecret);
     Claims claims = claimsJws.getBody();
 
-    assertThat(claims.getSubject()).isEqualTo(testUser.getId().toString());
-    assertThat(claims.get("email")).isEqualTo(testUser.getEmail());
-    // Check that the token has an expiration date in the future
+    assertThat(claims.getSubject()).isEqualTo(userId.toString());
+    assertThat(claims.get("email")).isEqualTo(email);
+    assertThat(claims.get("org")).isEqualTo(orgId.toString());
+    assertThat(claims.get("role")).isEqualTo(role);
     assertThat(claims.getExpiration()).isAfter(new Date());
-    // Access tokens might not have a 'family' claim by default, check if added later
-    // assertThat(claims.get("family")).isNull(); // Or assert specific family if implemented
+    assertTrue(tokenProvider.validateToken(token));
   }
 
   @Test
   void shouldGenerateValidRefreshToken() {
     // When
-    String token = tokenProvider.generateRefreshToken(testUser);
-      System.out.println("Token: " + token);
-    // Then
+    String token = tokenProvider.generateRefreshToken(userId, familyId);
+
     assertThat(token).isNotBlank();
     String[] parts = token.split("\\.");
     assertThat(parts).hasSize(3);
@@ -73,30 +67,25 @@ class TokenProviderTest {
     Jws<Claims> claimsJws = tokenProvider.parseToken(token, testSecret);
     Claims claims = claimsJws.getBody();
 
-    assertThat(claims.getSubject()).isEqualTo(testUser.getId().toString());
-    assertThat(claims.get("email")).isEqualTo(testUser.getEmail());
-    // Refresh tokens should have a longer expiry time
+    assertThat(claims.getSubject()).isEqualTo(userId.toString());
+    assertThat(claims.get("family")).isEqualTo(familyId.toString());
     assertThat(claims.getExpiration()).isAfter(new Date());
-    // Check if family ID or other refresh-specific claims are added later
-    // For now, just ensure basic structure and claims are present
+    assertTrue(tokenProvider.validateToken(token));
   }
 
   @Test
-  void shouldValidateValidTokenAndReturnClaims() {
+  void shouldValidateOnlyValidToken() {
     // Given: Generate a valid token
-    String token = tokenProvider.generateAccessToken(testUser);
+    String token = tokenProvider.generateAccessToken(userId, email, orgId, role);
+    String fakeToken = token.substring(0, token.length() - 1) + "a";
 
     // When: Validate the token
-    Claims claims = tokenProvider.validateToken(token);
-
-    // Then: Assert the claims are correct
-    assertThat(claims.getSubject()).isEqualTo(testUser.getId().toString());
-    assertThat(claims.get("email")).isEqualTo(testUser.getEmail());
-    assertThat(claims.getExpiration()).isAfter(new Date());
+    assert tokenProvider.validateToken(token);
+    assert !tokenProvider.validateToken(fakeToken);
   }
 
   @Test
-  void shouldThrowExceptionWhenValidatingExpiredToken() {
+  void shouldInValidateExpiredToken() {
     // Given: Create an expired token manually for testing
     Instant now = Instant.now();
     Instant expiredInstant = now.minusSeconds(1); // Expired 1 second ago
@@ -104,92 +93,7 @@ class TokenProviderTest {
     Date expiresAt = Date.from(expiredInstant);
 
     String expiredToken =
-        tokenProvider.createTokenWithSpecificTimes(testUser, issuedAt, expiresAt, testSecret);
-
-    // When & Then: Validating the expired token should throw ExpiredJwtException
-    assertThatThrownBy(() -> tokenProvider.validateToken(expiredToken))
-        .isInstanceOf(ExpiredJwtException.class);
+        tokenProvider.createTokenWithSpecificTimes(userId, issuedAt, expiresAt, testSecret);
+    assertFalse(tokenProvider.validateToken(expiredToken));
   }
-
-  //  private final JwtSecretConfig cfg =
-  //      new JwtSecretConfig(
-  //          "1234567890123456789012345678901234567890123456789012345678901234"); // 256-bit hex
-  //  private final ZoneId zone = ZoneId.of("UTC");
-  //  private final Clock clock = Clock.fixed(Instant.parse("2024-01-01T12:00:00Z"), zone);
-  //  private final TokenProvider provider = new JwtTokenProvider(cfg, clock);
-
-  //
-  //
-  //    @Test
-  //    void shouldGenerateValidAccessToken() {
-  //        UUID userId = UUID.randomUUID();
-  //        UUID orgId = UUID.randomUUID();
-  //        String token = provider.generateAccessToken(userId, "a@b.com", orgId, "ADMIN");
-  //
-  //        assertThat(token).isNotBlank();
-  //        assertThat(provider.validateToken(token)).isTrue();
-  //    }
-  //
-  //    @Test
-  //    void shouldRejectInvalidAccessToken() {
-  //        assertThat(provider.validateToken("garbage")).isFalse();
-  //    }
-  //
-  //    @Test
-  //    void shouldGenerateValidRefreshTokenWithFamily() {
-  //        UUID family = UUID.randomUUID();
-  //        String token = provider.generateRefreshToken(UUID.randomUUID(), family);
-  //        assertThat(token).isNotBlank();
-  //        assertThat(provider.validateToken(token)).isTrue();
-  //    }
-
-  //  @Test
-  //  void shouldRotateRefresh() {
-  //    UUID family = UUID.randomUUID();
-  //    UUID userId = UUID.randomUUID();
-  //
-  //    // original provider
-  //    JwtTokenProvider provider = new JwtTokenProvider(cfg, clock);
-  //    String old = provider.generateRefreshToken(userId, family);
-  //    System.out.println("OLD = " + old);
-  //    // advance clock 1 ms
-  //    Clock advanced = Clock.offset(clock, Duration.ofMillis(1));
-  //    JwtTokenProvider advancedProvider = new JwtTokenProvider(cfg, advanced);
-  //
-  //    String neo = advancedProvider.rotateRefreshToken(old);
-  //    System.out.println("NEW = " + neo);
-  //    assertThat(advancedProvider.validateToken(neo)).isTrue();
-  //    assertThat(neo).isNotBlank().isNotEqualTo(old);
-  //  }
-
-  //    @Test
-  //    void shouldFailRotateOnGarbage() {
-  //        assertThatThrownBy(() -> provider.rotateRefreshToken("garbage"))
-  //                .isInstanceOf(IllegalArgumentException.class);
-  //    }
-
-  /*@Test
-  void tokenRoundTrip() {
-    UUID uid = UUID.randomUUID();
-    UUID oid = UUID.randomUUID();
-
-    String access = provider.generateAccessToken(uid, "a@b.com", oid, "ADMIN");
-    assertThat(provider.validateToken(access)).isTrue();
-
-    assertThat(provider.validateToken(access)).isTrue();
-
-    UUID family = UUID.randomUUID();
-    String refresh = provider.generateRefreshToken(uid, family);
-    assertThat(provider.validateToken(refresh)).isTrue();
-
-    Clock advanced = Clock.offset(clock, Duration.ofMillis(1));
-    TokenProvider provider2 = new JwtTokenProvider(cfg, advanced);
-
-    String rotated = provider2.rotateRefreshToken(refresh);
-
-    assertThat(rotated).isNotEqualTo(refresh);
-    assertThat(provider2.validateToken(rotated)).isTrue();
-    assertThat(provider.validateToken(rotated)).isFalse();
-    assertThat(provider2.validateToken(refresh)).isFalse();
-  }*/
 }
