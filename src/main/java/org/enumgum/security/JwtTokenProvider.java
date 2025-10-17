@@ -43,16 +43,9 @@ public class JwtTokenProvider implements TokenProvider {
 
     Key signingKey = Keys.hmacShaKeyFor(secret.getBytes());
 
-    // For refresh token rotation, you might want to include a 'jti' (JWT ID) or 'family' claim
-    // The persistence and invalidation of the *old* token happens in the service layer.
-    // Here, we just generate the token string.
-
     return Jwts.builder()
         .setSubject(userId.toString())
         .claim("family", familyId.toString())
-        // Add a unique ID for the token instance if rotation logic requires it at the provider
-        // level
-        //         .claim("jti", UUID.randomUUID().toString())
         .setIssuedAt(now)
         .setExpiration(expiryDate)
         .signWith(signingKey, SignatureAlgorithm.HS512)
@@ -70,8 +63,15 @@ public class JwtTokenProvider implements TokenProvider {
 
   @Override
   public String rotateRefreshToken(String oldRefreshToken) {
-    //        todo not yet implemented
-    return "";
+    try {
+      Claims claims = parseToken(oldRefreshToken, secret).getBody();
+      UUID userId = UUID.fromString(claims.getSubject());
+      UUID family = UUID.fromString(claims.get("family", String.class));
+
+      return generateRefreshToken(userId, family);
+    } catch (JwtException | IllegalArgumentException ex) {
+      throw new IllegalArgumentException("Invalid refresh token", ex);
+    }
   }
 
   // Helper method for parsing tokens (used by validateToken and potentially tests)

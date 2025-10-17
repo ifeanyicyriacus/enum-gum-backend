@@ -11,7 +11,6 @@ import java.util.Date;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class TokenProviderTest {
@@ -95,5 +94,21 @@ class TokenProviderTest {
     String expiredToken =
         tokenProvider.createTokenWithSpecificTimes(userId, issuedAt, expiresAt, testSecret);
     assertFalse(tokenProvider.validateToken(expiredToken));
+  }
+
+  @Test
+  void shouldRotateRefreshToken() {
+    UUID family = UUID.randomUUID();
+    UUID userId = UUID.randomUUID();
+
+    // original provider
+    String old = tokenProvider.generateRefreshToken(userId, family);
+    System.out.println("Old: " + old);
+    String neo = tokenProvider.rotateRefreshToken(old);
+    System.out.println("New: " + neo);
+
+    assertThat(neo).isNotEqualTo(old); // different string
+    assertThat(tokenProvider.validateToken(neo)).isTrue();
+    assertThat(tokenProvider.validateToken(old)).isTrue(); // old still valid (soft rotation)
   }
 }
