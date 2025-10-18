@@ -5,6 +5,8 @@ import io.jsonwebtoken.security.Keys;
 import java.security.Key;
 import java.util.Date;
 import java.util.UUID;
+
+import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -52,9 +54,10 @@ public class JwtTokenProvider implements TokenProvider {
         .compact();
   }
 
+  @Override
   public boolean validateToken(String token) {
     try {
-      parseToken(token, secret);
+      parseToken(token);
       return true;
     } catch (JwtException | IllegalArgumentException e) {
       return false;
@@ -64,7 +67,7 @@ public class JwtTokenProvider implements TokenProvider {
   @Override
   public String rotateRefreshToken(String oldRefreshToken) {
     try {
-      Claims claims = parseToken(oldRefreshToken, secret).getBody();
+      Claims claims = parseToken(oldRefreshToken).getBody();
       UUID userId = UUID.fromString(claims.getSubject());
       UUID family = UUID.fromString(claims.get("family", String.class));
 
@@ -74,14 +77,15 @@ public class JwtTokenProvider implements TokenProvider {
     }
   }
 
-  // Helper method for parsing tokens (used by validateToken and potentially tests)
-  // Made package-private for testing access if needed, or keep private if only used internally
-  Jws<Claims> parseToken(String token, String secret) {
+  @Override
+  public Jws<Claims> parseToken(String token) {
     Key signingKey = Keys.hmacShaKeyFor(secret.getBytes());
     return Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token);
   }
 
-  String createTokenWithSpecificTimes(UUID userId, Date issuedAt, Date expiresAt, String secret) {
+  @Override
+  public String createTokenWithSpecificTimes(
+      UUID userId, Date issuedAt, Date expiresAt, String secret) {
 
     Key signingKey = Keys.hmacShaKeyFor(secret.getBytes());
     return Jwts.builder()
@@ -91,4 +95,10 @@ public class JwtTokenProvider implements TokenProvider {
         .signWith(signingKey, SignatureAlgorithm.HS512)
         .compact();
   }
+
+    @Override
+    public Claims getClaimsIfValid(String token) throws
+            ExpiredJwtException, MalformedJwtException, SignatureException {
+      return parseToken(token).getBody();
+    }
 }

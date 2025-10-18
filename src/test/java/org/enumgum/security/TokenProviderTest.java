@@ -42,7 +42,7 @@ class TokenProviderTest {
     assertThat(parts).hasSize(3); // Should have 3 parts separated by dots
 
     // Validate token manually using JJWT (simulate what validateToken might do)
-    Jws<Claims> claimsJws = tokenProvider.parseToken(token, testSecret);
+    Jws<Claims> claimsJws = tokenProvider.parseToken(token);
     Claims claims = claimsJws.getBody();
 
     assertThat(claims.getSubject()).isEqualTo(userId.toString());
@@ -63,7 +63,7 @@ class TokenProviderTest {
     assertThat(parts).hasSize(3);
 
     // Validate token manually using JJWT
-    Jws<Claims> claimsJws = tokenProvider.parseToken(token, testSecret);
+    Jws<Claims> claimsJws = tokenProvider.parseToken(token);
     Claims claims = claimsJws.getBody();
 
     assertThat(claims.getSubject()).isEqualTo(userId.toString());
