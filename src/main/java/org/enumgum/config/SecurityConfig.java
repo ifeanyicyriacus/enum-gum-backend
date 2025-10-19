@@ -24,6 +24,8 @@ public class SecurityConfig {
     return http.csrf(AbstractHttpConfigurer::disable)
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
+        // Disable anonymous authentication to ensure context is null when no JWT is present/valid
+        //            .anonymous(AbstractHttpConfigurer::disable)
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(

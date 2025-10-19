@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class TokenProviderTest {
-  private JwtTokenProvider tokenProvider;
+  private TokenProvider tokenProvider;
   private final String testSecret =
       "1234567890123456789012345678901234567890123456789012345678901234";
 
@@ -101,14 +101,15 @@ class TokenProviderTest {
     UUID family = UUID.randomUUID();
     UUID userId = UUID.randomUUID();
 
+    ReflectionTestUtils.setField(tokenProvider, "secret", testSecret);
+
     // original provider
     String old = tokenProvider.generateRefreshToken(userId, family);
-    System.out.println("Old: " + old);
     String neo = tokenProvider.rotateRefreshToken(old);
-    System.out.println("New: " + neo);
 
     assertThat(neo).isNotEqualTo(old); // different string
     assertThat(tokenProvider.validateToken(neo)).isTrue();
-    assertThat(tokenProvider.validateToken(old)).isTrue(); // old still valid (soft rotation)
+    assertThat(tokenProvider.validateToken(old))
+        .isTrue(); // old still valid (soft rotation)
   }
 }

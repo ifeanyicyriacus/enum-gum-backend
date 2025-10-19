@@ -2,11 +2,11 @@ package org.enumgum.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import java.security.Key;
 import java.util.Date;
 import java.util.UUID;
-
-import io.jsonwebtoken.security.SignatureException;
+import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -19,12 +19,12 @@ public class JwtTokenProvider implements TokenProvider {
 
   private static final long ACCESS_TOKEN_EXPIRY_SECONDS = 3600L; // 1 hour
   private static final long REFRESH_TOKEN_EXPIRY_SECONDS = 604800L; // 7 days
+  private final AtomicLong counter = new AtomicLong();
 
   @Override
   public String generateAccessToken(UUID userId, String email, UUID orgId, String role) {
     Date now = new Date();
-    Date expiryDate = new Date(now.getTime() + ACCESS_TOKEN_EXPIRY_SECONDS * 1000);
-
+    Date expiryDate = Date.from(now.toInstant().plusSeconds(ACCESS_TOKEN_EXPIRY_SECONDS));
     Key signingKey = Keys.hmacShaKeyFor(secret.getBytes());
 
     return Jwts.builder()
@@ -41,13 +41,14 @@ public class JwtTokenProvider implements TokenProvider {
   @Override
   public String generateRefreshToken(UUID userId, UUID familyId) {
     Date now = new Date();
-    Date expiryDate = new Date(now.getTime() + REFRESH_TOKEN_EXPIRY_SECONDS * 1000);
+    Date expiryDate = Date.from(now.toInstant().plusSeconds(REFRESH_TOKEN_EXPIRY_SECONDS));
 
     Key signingKey = Keys.hmacShaKeyFor(secret.getBytes());
 
     return Jwts.builder()
         .setSubject(userId.toString())
         .claim("family", familyId.toString())
+        .claim("jti", counter.incrementAndGet())
         .setIssuedAt(now)
         .setExpiration(expiryDate)
         .signWith(signingKey, SignatureAlgorithm.HS512)
@@ -96,9 +97,9 @@ public class JwtTokenProvider implements TokenProvider {
         .compact();
   }
 
-    @Override
-    public Claims getClaimsIfValid(String token) throws
-            ExpiredJwtException, MalformedJwtException, SignatureException {
-      return parseToken(token).getBody();
-    }
+  @Override
+  public Claims getClaimsIfValid(String token)
+      throws ExpiredJwtException, MalformedJwtException, SignatureException {
+    return parseToken(token).getBody();
+  }
 }

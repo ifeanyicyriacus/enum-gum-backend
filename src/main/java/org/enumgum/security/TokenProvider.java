@@ -5,7 +5,6 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
-
 import java.util.Date;
 import java.util.UUID;
 
@@ -23,6 +22,6 @@ public interface TokenProvider {
 
   String createTokenWithSpecificTimes(UUID userId, Date issuedAt, Date expiresAt, String secret);
 
-  Claims getClaimsIfValid(String token) throws ExpiredJwtException, MalformedJwtException, SignatureException;
-
+  Claims getClaimsIfValid(String token)
+      throws ExpiredJwtException, MalformedJwtException, SignatureException;
 }

@@ -1,23 +1,20 @@
 package org.enumgum.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import jakarta.servlet.FilterChain;
-
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.util.UUID;
-
-import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class JwtAuthFilterTest {
@@ -39,6 +36,7 @@ class JwtAuthFilterTest {
 
   @BeforeEach
   void setup() {
+    SecurityContextHolder.clearContext();
     mockTokenProvider = mock(JwtTokenProvider.class);
     jwtAuthFilter = new JwtAuthFilter(mockTokenProvider);
     request = new MockHttpServletRequest();
@@ -47,101 +45,101 @@ class JwtAuthFilterTest {
   }
 
   @Test
-    void shouldExtractTokenFromBearerHeader() throws ServletException, IOException {
-        request.addHeader("Authorization", BEARER_TOKEN);
+  void shouldExtractTokenFromBearerHeader() throws ServletException, IOException {
+    request.addHeader("Authorization", BEARER_TOKEN);
 
-      Jws<Claims> mockClaimsJws = mock(Jws.class);
-      Claims mockClaims = mock(Claims.class);
-      when(mockClaimsJws.getBody()).thenReturn(mockClaims);
-      when(mockClaims.getSubject()).thenReturn(userId.toString());
-      when(mockClaims.get("role", String.class)).thenReturn(role);
-      // when(mockClaims.get("org", String.class)).thenReturn(orgId.toString());
+    Jws<Claims> mockClaimsJws = mock(Jws.class);
+    Claims mockClaims = mock(Claims.class);
+    when(mockClaimsJws.getBody()).thenReturn(mockClaims);
+    when(mockClaims.getSubject()).thenReturn(userId.toString());
+    when(mockClaims.get("role", String.class)).thenReturn(role);
+    // when(mockClaims.get("org", String.class)).thenReturn(orgId.toString());
 
-      when(mockTokenProvider.validateToken(VALID_JWT)).thenReturn(true);
-      when(mockTokenProvider.parseToken(VALID_JWT)).thenReturn(mockClaimsJws);
-      jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
-      verify(mockTokenProvider).validateToken(VALID_JWT);
+    when(mockTokenProvider.validateToken(VALID_JWT)).thenReturn(true);
+    when(mockTokenProvider.parseToken(VALID_JWT)).thenReturn(mockClaimsJws);
+    jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
+    verify(mockTokenProvider).validateToken(VALID_JWT);
   }
 
   @Test
-    void shouldSetAuthenticationInContextWhenTokenIsValid() throws ServletException, IOException {
-        request.addHeader("Authorization", BEARER_TOKEN);
+  void shouldSetAuthenticationInContextWhenTokenIsValid() throws ServletException, IOException {
+    request.addHeader("Authorization", BEARER_TOKEN);
 
-        Jws<Claims> mockClaimsJws = mock(Jws.class);
-        Claims mockClaims = mock(Claims.class);
-        when(mockClaimsJws.getBody()).thenReturn(mockClaims);
-        when(mockClaims.getSubject()).thenReturn(userId.toString());
-        when(mockClaims.get("role", String.class)).thenReturn(role);
+    Jws<Claims> mockClaimsJws = mock(Jws.class);
+    Claims mockClaims = mock(Claims.class);
+    when(mockClaimsJws.getBody()).thenReturn(mockClaims);
+    when(mockClaims.getSubject()).thenReturn(userId.toString());
+    when(mockClaims.get("role", String.class)).thenReturn(role);
 
-        when(mockTokenProvider.validateToken(VALID_JWT)).thenReturn(true);
+    when(mockTokenProvider.validateToken(VALID_JWT)).thenReturn(true);
+    when(mockTokenProvider.parseToken(VALID_JWT)).thenReturn(mockClaimsJws);
 
-      // When: The filter processes the request
-      jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
+    // When: The filter processes the request
+    jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
 
-      // Then: The authentication should be set in the SecurityContext
-      Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-      assertThat(authentication).isNotNull();
-      assertThat(authentication.getName()).isEqualTo(userId.toString()); // Subject should be the name
+    // Then: The authentication should be set in the SecurityContext
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    assertThat(authentication).isNotNull();
+    assertThat(authentication.getName()).isEqualTo(userId.toString()); // Subject should be the name
 
-      assertThat(authentication.getAuthorities())
-              .containsExactly(new SimpleGrantedAuthority("ROLE_" + role));
+    assertThat(authentication.getAuthorities())
+        .extracting(GrantedAuthority::getAuthority)
+        .contains("ROLE_" + role);
+  }
 
-    }
+  @Test
+  void shouldNotSetAuthenticationWhenTokenIsInvalid() throws ServletException, IOException {
+    // Given: A request with an invalid Bearer token
+    request.addHeader("Authorization", "Bearer " + INVALID_JWT);
 
-    @Test
-    void shouldNotSetAuthenticationWhenTokenIsInvalid() throws ServletException, IOException {
-        // Given: A request with an invalid Bearer token
-        request.addHeader("Authorization", "Bearer " + INVALID_JWT);
+    // Mock the TokenProvider to return false for validity
+    when(mockTokenProvider.validateToken(INVALID_JWT)).thenReturn(false);
 
-        // Mock the TokenProvider to return false for validity
-        when(mockTokenProvider.validateToken(INVALID_JWT)).thenReturn(false);
+    // When: The filter processes the request
+    jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
 
-        // When: The filter processes the request
-        jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
+    // Then: The SecurityContext should remain empty
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        // Then: The SecurityContext should remain empty
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        assertThat(authentication).isNull();
-    }
+    assertThat(auth).isNull();
+  }
 
-    @Test
-    void shouldNotSetAuthenticationWhenNoBearerToken() throws ServletException, IOException {
-        // Given: A request without an Authorization header
-        // request.addHeader("Authorization", BEARER_TOKEN); // Don't add header
+  @Test
+  void shouldNotSetAuthenticationWhenNoBearerToken() throws ServletException, IOException {
+    // Given: A request without an Authorization header
+    // request.addHeader("Authorization", BEARER_TOKEN); // Don't add header
 
-        // When: The filter processes the request
-        jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
+    // When: The filter processes the request
+    jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
 
-        // Then: The SecurityContext should remain empty
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        assertThat(authentication).isNull();
+    // Then: The SecurityContext should remain empty
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        // And the filter chain should continue
-        verify(mockFilterChain).doFilter(request, response);
-    }
+    assertThat(auth).isNull();
 
-    @Test
-    void shouldContinueFilterChain() throws ServletException, IOException {
-        // Given: A request (with or without token)
-        request.addHeader("Authorization", BEARER_TOKEN); // Add token, validity doesn't matter for this test
-        when(mockTokenProvider.validateToken(VALID_JWT)).thenReturn(true); // Mock validity
+    // And the filter chain should continue
+    verify(mockFilterChain).doFilter(request, response);
+  }
 
-        // Mock claims
-        Jws<Claims> mockClaimsJws = mock(Jws.class);
-        Claims mockClaims = mock(Claims.class);
-        when(mockClaimsJws.getBody()).thenReturn(mockClaims);
-        when(mockClaims.getSubject()).thenReturn(userId.toString());
-        when(mockClaims.get("role", String.class)).thenReturn(role);
+  @Test
+  void shouldContinueFilterChain() throws ServletException, IOException {
+    // Given: A request (with or without token)
+    request.addHeader(
+        "Authorization", BEARER_TOKEN); // Add token, validity doesn't matter for this test
+    when(mockTokenProvider.validateToken(VALID_JWT)).thenReturn(true); // Mock validity
 
-        // When: The filter processes the request
-        jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
+    // Mock claims
+    Jws<Claims> mockClaimsJws = mock(Jws.class);
+    Claims mockClaims = mock(Claims.class);
+    when(mockTokenProvider.parseToken(VALID_JWT)).thenReturn(mockClaimsJws);
+    when(mockClaimsJws.getBody()).thenReturn(mockClaims);
+    when(mockClaims.getSubject()).thenReturn(userId.toString());
+    when(mockClaims.get("role", String.class)).thenReturn(role);
 
-        // Then: The filter chain should continue
-        verify(mockFilterChain).doFilter(request, response);
-    }
+    // When: The filter processes the request
+    jwtAuthFilter.doFilterInternal(request, response, mockFilterChain);
 
-
-
-
-
+    // Then: The filter chain should continue
+    verify(mockFilterChain).doFilter(request, response);
+  }
 }
