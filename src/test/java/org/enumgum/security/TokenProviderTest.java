@@ -109,7 +109,6 @@ class TokenProviderTest {
 
     assertThat(neo).isNotEqualTo(old); // different string
     assertThat(tokenProvider.validateToken(neo)).isTrue();
-    assertThat(tokenProvider.validateToken(old))
-        .isTrue(); // old still valid (soft rotation)
+    assertThat(tokenProvider.validateToken(old)).isTrue(); // old still valid (soft rotation)
   }
 }

@@ -1,7 +1,7 @@
 package org.enumgum.config;
 
+import lombok.RequiredArgsConstructor;
 import org.enumgum.security.JwtAuthFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,9 +15,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-  @Autowired private JwtAuthFilter jwtAuthFilter;
+  private final JwtAuthFilter jwtAuthFilter;
 
   @Bean
   SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -25,7 +26,7 @@ public class SecurityConfig {
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
         // Disable anonymous authentication to ensure context is null when no JWT is present/valid
-        //            .anonymous(AbstractHttpConfigurer::disable)
+        .anonymous(AbstractHttpConfigurer::disable)
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
@@ -47,4 +48,11 @@ public class SecurityConfig {
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder(12);
   }
+
+  //  @Bean
+  //    public TokenProvider tokenProvider(){
+  //      return new JwtTokenProvider(
+  //
+  //      );
+  //  }
 }
