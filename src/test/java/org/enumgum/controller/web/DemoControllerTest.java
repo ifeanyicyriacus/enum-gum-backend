@@ -1,4 +1,4 @@
-package org.enumgum.controller.advice.web;
+package org.enumgum.controller.web;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
