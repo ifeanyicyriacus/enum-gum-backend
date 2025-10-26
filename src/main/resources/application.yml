@@ -22,12 +22,16 @@ spring:
         show-sql: true
 
 
-#
   flyway:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
-#
+
+app:
+  jwt:
+    secret: mySecretKeyMustBeAtLeast256BitsLongForHS512AlgorithmMySecretKeyMustBeAtLeast256BitsLongForHS512Algorithm
+
+
 #  security:
 #    userId:
 #      password: dummy  # Will be disabled in custom config
@@ -40,9 +44,10 @@ spring:
 #  api-docs.path: /v3/api-docs
 #  swagger-ui.path: /swagger-ui.html
 #
-#logging:
-#  level:
-#    org.enumgum: DEBUG
-#    org.springframework.web: DEBUG
-#    org.springframework.security: DEBUG
-#
+logging:
+  level:
+    org.enumgum: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.web.FilterChainProxy: DEBUG
+

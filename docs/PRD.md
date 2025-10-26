@@ -11,12 +11,12 @@ transparent usage limits—without worrying about infrastructure.
 
 ## 2. Personas (Core Users)
 
-| Persona                                          | Primary Jobs                                                                  |
-|--------------------------------------------------|-------------------------------------------------------------------------------|
-| **Organisation Admin** (Primary User, 1 per org) | Create org, manage billing, invite/delete any member, full data access        |
-| **Manager** (Secondary User, 0-n per org)        | Create & update programs, view team                                           |
-| **Member** (End User, 0-n per org)               | Read programs, stay informed                                                  |
-| **System** (Background Supporting User)          | Send emails, rotate tokens, enforce limits, health pings and metric colection |
+| Persona                                          | Primary Jobs                                                                   |
+|--------------------------------------------------|--------------------------------------------------------------------------------|
+| **Organisation Admin** (Primary User, 1 per org) | Create org, manage billing, invite/delete any member, full data access         |
+| **Manager** (Secondary User, 0-n per org)        | Create & update programs, view team                                            |
+| **Member** (End User, 0-n per org)               | Read programs, stay informed                                                   |
+| **System** (Background Supporting User)          | Send emails, rotate tokens, enforce limits, health pings and metric collection |
 
 ## 3. Functional Requirements
 
