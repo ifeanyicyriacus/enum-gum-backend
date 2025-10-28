@@ -1,8 +1,14 @@
 package org.enumgum.service;
 
-import org.enumgum.dto.SignupRequest;
-import org.enumgum.dto.SignupResponse;
+import org.enumgum.dto.*;
 
 public interface AuthService {
   SignupResponse signup(SignupRequest request);
+
+    TokenResponse login(LoginRequest request);
+
+    TokenResponse refresh(RefreshRequest req);
+
+    void logout(LogoutRequest req);
+
 }

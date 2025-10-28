@@ -2,6 +2,8 @@ package org.enumgum.repository;
 
 import java.util.Optional;
 import java.util.UUID;
+
+import jakarta.validation.constraints.NotBlank;
 import org.enumgum.domain.model.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -15,4 +17,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
   @Modifying
   @Query("update RefreshToken r set r.used = true where r.family = ?1")
   void markFamilyUsed(UUID family);
+
+  void deleteByToken(@NotBlank String token);
 }

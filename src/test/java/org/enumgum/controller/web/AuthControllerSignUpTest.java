@@ -33,7 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
       SecurityAutoConfiguration.class,
       SecurityFilterAutoConfiguration.class
     })
-public class AuthControllerTest {
+public class AuthControllerSignUpTest {
 
   @Autowired private MockMvc mockMvc;
 

@@ -3,12 +3,14 @@ package org.enumgum.service;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+
+import io.jsonwebtoken.Claims;
 import org.enumgum.domain.error.ErrorCode;
 import org.enumgum.domain.model.VerificationToken;
-import org.enumgum.dto.SignupRequest;
-import org.enumgum.dto.SignupResponse;
+import org.enumgum.dto.*;
 import org.enumgum.entity.User;
 import org.enumgum.exception.BusinessException;
+import org.enumgum.repository.RefreshTokenRepository;
 import org.enumgum.repository.UserRepository;
 import org.enumgum.repository.VerificationTokenRepository;
 import org.enumgum.security.TokenProvider;
@@ -22,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
   @Autowired private UserRepository userRepository;
+
+  @Autowired private RefreshTokenRepository refreshTokenRepository;
 
   @Autowired private VerificationTokenRepository verificationTokenRepository;
 
@@ -93,7 +97,57 @@ public class AuthServiceImpl implements AuthService {
     return new SignupResponse("Verification email sent successfully. Please check your inbox.");
   }
 
-  // Helper method to generate verification token string
+    @Override
+    public TokenResponse login(LoginRequest req) {
+        User user = userRepository.findByEmail(req.email())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Bad credentials"));
+
+        if (!user.getVerified()) {
+            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED, "Email not verified");
+        }
+        if (!passwordEncoder.matches(req.password(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Bad credentials");
+        }
+
+        String access  = tokenProvider.generateAccessToken(user.getId(), user.getEmail()/*, UUID.randomUUID(), "MEMBER"*/);
+        String refresh = tokenProvider.generateRefreshToken(user.getId(), UUID.randomUUID()); // family created here
+        return new TokenResponse(
+                access,
+                refresh,
+                "Bearer",
+                3600); // 1 hour in seconds);
+    }
+
+    @Override
+    public TokenResponse refresh(RefreshRequest req) {
+        if (!tokenProvider.validateToken(req.refreshToken())) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN, "Invalid refresh token" );
+        }
+        Claims claims = tokenProvider.parseToken(req.refreshToken()).getBody();
+        UUID userId   = UUID.fromString(claims.getSubject());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Bad credentials"));
+
+
+        // rotate: same family, new iat/exp
+        String newAccess  = tokenProvider.generateAccessToken(userId, user.getEmail()/*, UUID.randomUUID()*/);
+        String newRefresh = tokenProvider.rotateRefreshToken(req.refreshToken());
+        return new TokenResponse(
+                newAccess,
+                newRefresh,
+                "Bearer",
+                3600); // 1 hour in seconds
+    }
+
+    @Override
+    public void logout(LogoutRequest req) {
+        if (!tokenProvider.validateToken(req.refreshToken())) return; // silent fail
+        Claims claims = tokenProvider.parseToken(req.refreshToken()).getBody();
+        UUID userId = UUID.fromString(claims.getSubject());
+        refreshTokenRepository.deleteByToken(req.refreshToken()); // simple delete
+    }
+
+    // Helper method to generate verification token string
   // You might use the TokenProvider or just generate a random UUID string
   private String generateVerificationToken(UUID userId, String email) {
     // Option 1: Use TokenProvider (if adapted for verification tokens)
