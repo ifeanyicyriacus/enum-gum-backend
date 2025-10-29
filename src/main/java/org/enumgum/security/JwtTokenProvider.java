@@ -102,7 +102,10 @@ public class JwtTokenProvider implements TokenProvider {
 
   @Override
   public Claims getClaimsIfValid(String token)
-      throws ExpiredJwtException, MalformedJwtException, SignatureException {
+      throws ExpiredJwtException,
+          MalformedJwtException,
+          SignatureException,
+          UnsupportedJwtException {
     return parseToken(token).getBody();
   }
 }

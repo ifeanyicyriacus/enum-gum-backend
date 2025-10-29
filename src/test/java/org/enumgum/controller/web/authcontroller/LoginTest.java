@@ -12,8 +12,6 @@ import org.enumgum.domain.error.ErrorCode;
 import org.enumgum.dto.LoginRequest;
 import org.enumgum.dto.TokenResponse;
 import org.enumgum.exception.BusinessException;
-import org.enumgum.repository.RefreshTokenRepository;
-import org.enumgum.repository.UserRepository;
 import org.enumgum.security.JwtSecurityMockConfig;
 import org.enumgum.security.TokenProvider;
 import org.enumgum.service.AuthService;
@@ -25,7 +23,6 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAut
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;

@@ -38,41 +38,39 @@ public class LogoutTest {
     doNothing().when(authService).logout(refreshToken);
 
     mockMvc
-        .perform(
-            post("/api/auth/logout")
-                .header("Authorization", authHeader))
+        .perform(post("/api/auth/logout").header("Authorization", authHeader))
         .andExpect(status().isNoContent());
 
     verify(authService, times(1)).logout(refreshToken);
   }
 
-//  @Test
-//  void shouldClearContextOnLogout() throws Exception {
-//    // given: a logged-in user (we simulate by setting a refresh token row)
-//    User user =
-//        userRepository.save(
-//            User.builder()
-//                .email("logout@enumgum.com")
-//                .password(passwordEncoder.encode("pass"))
-//                .verified(true)
-//                .build());
-//    String refresh = tokenProvider.generateRefreshToken(user.getId(), UUID.randomUUID());
-//    refreshTokenRepository.save(
-//        RefreshToken.builder()
-//            .token(refresh)
-//            .userId(user.getId())
-//            .family(UUID.randomUUID())
-//            .expiresAt(Instant.now().plusSeconds(3600))
-//            .used(false)
-//            .build());
-//
-//    String body = objectMapper.writeValueAsString(new LogoutRequest(refresh));
-//
-//    // when / then
-//    mockMvc
-//        .perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON).content(body))
-//        .andExpect(status().isNoContent());
-//
-//    assertThat(refreshTokenRepository.findByToken(refresh)).isEmpty();
-//  }
+  //  @Test
+  //  void shouldClearContextOnLogout() throws Exception {
+  //    // given: a logged-in user (we simulate by setting a refresh token row)
+  //    User user =
+  //        userRepository.save(
+  //            User.builder()
+  //                .email("logout@enumgum.com")
+  //                .password(passwordEncoder.encode("pass"))
+  //                .verified(true)
+  //                .build());
+  //    String refresh = tokenProvider.generateRefreshToken(user.getId(), UUID.randomUUID());
+  //    refreshTokenRepository.save(
+  //        RefreshToken.builder()
+  //            .token(refresh)
+  //            .userId(user.getId())
+  //            .family(UUID.randomUUID())
+  //            .expiresAt(Instant.now().plusSeconds(3600))
+  //            .used(false)
+  //            .build());
+  //
+  //    String body = objectMapper.writeValueAsString(new LogoutRequest(refresh));
+  //
+  //    // when / then
+  //    mockMvc
+  //        .perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON).content(body))
+  //        .andExpect(status().isNoContent());
+  //
+  //    assertThat(refreshTokenRepository.findByToken(refresh)).isEmpty();
+  //  }
 }
