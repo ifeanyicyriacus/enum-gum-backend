@@ -25,7 +25,7 @@ public class JwtTokenProvider implements TokenProvider {
   private final AtomicLong counter = new AtomicLong();
 
   @Override
-  public String generateAccessToken(UUID userId, String email/*, UUID orgId, String role*/) {
+  public String generateAccessToken(UUID userId, String email /*, UUID orgId, String role*/) {
     Date now = new Date();
     Date expiryDate = Date.from(now.toInstant().plusSeconds(ACCESS_TOKEN_EXPIRY_SECONDS));
     Key signingKey = Keys.hmacShaKeyFor(secret.getBytes());
@@ -33,8 +33,8 @@ public class JwtTokenProvider implements TokenProvider {
     return Jwts.builder()
         .setSubject(userId.toString()) // Use user ID as the subject
         .claim("email", email) // Add email as a custom claim
-//        .claim("org", orgId.toString())
-//        .claim("role", role)
+        //        .claim("org", orgId.toString())
+        //        .claim("role", role)
         .setIssuedAt(now)
         .setExpiration(expiryDate)
         .signWith(signingKey, SignatureAlgorithm.HS512) // Use HS512

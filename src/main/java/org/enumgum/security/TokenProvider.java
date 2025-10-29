@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public interface TokenProvider {
 
-  String generateAccessToken(UUID userId, String email/*, UUID orgId, String role*/);
+  String generateAccessToken(UUID userId, String email /*, UUID orgId, String role*/);
 
   String generateRefreshToken(UUID userId, UUID family);
 

@@ -1,5 +1,11 @@
 package org.enumgum.controller.web.authcontroller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.enumgum.controller.web.AuthController;
 import org.enumgum.domain.error.ErrorCode;
@@ -26,96 +32,93 @@ import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 @Import(JwtSecurityMockConfig.class)
 @WebMvcTest(
-        controllers = AuthController.class,
-        excludeAutoConfiguration = {
-                SecurityAutoConfiguration.class,
-                SecurityFilterAutoConfiguration.class
-        })
+    controllers = AuthController.class,
+    excludeAutoConfiguration = {
+      SecurityAutoConfiguration.class,
+      SecurityFilterAutoConfiguration.class
+    })
 public class LoginTest {
 
+  @Autowired private MockMvc mockMvc;
+  @Autowired private ObjectMapper objectMapper;
+  @MockitoBean private UserRepository userRepository;
+  @MockitoBean private PasswordEncoder passwordEncoder;
 
-    @Autowired private MockMvc              mockMvc;
-    @Autowired private ObjectMapper     objectMapper;
-    @MockitoBean private UserRepository userRepository;
-    @MockitoBean private PasswordEncoder passwordEncoder;
+  @MockitoBean private AuthService authService;
+  @MockitoBean private TokenProvider tokenProvider;
 
-    @MockitoBean private AuthService authService;
-    @MockitoBean private TokenProvider tokenProvider;
+  @MockitoBean RefreshTokenRepository refreshTokenRepository;
 
-    @MockitoBean RefreshTokenRepository refreshTokenRepository;
+  private LoginRequest validLoginRequest;
+  private LoginRequest invalidLoginRequest;
+  private LoginRequest unverifiedEmailLoginRequest;
+  private LogoutRequest validLogoutRequest;
+  private RefreshRequest validRefreshRequest;
 
-    private LoginRequest validLoginRequest;
-    private LoginRequest  invalidLoginRequest;
-    private LoginRequest  unverifiedEmailLoginRequest;
-    private LogoutRequest validLogoutRequest;
-    private RefreshRequest validRefreshRequest;
+  @BeforeEach
+  void setUp() {
+    validLoginRequest = new LoginRequest("newuser@example.com", "ValidPass123");
+    invalidLoginRequest = new LoginRequest("nonexistent@example.com", "WrongPass123");
+    unverifiedEmailLoginRequest = new LoginRequest("unverified@example.com", "ValidPass123");
 
-    @BeforeEach
-    void setUp() {
-        validLoginRequest = new LoginRequest("newuser@example.com", "ValidPass123");
-        invalidLoginRequest = new LoginRequest("nonexistent@example.com", "WrongPass123");
-        unverifiedEmailLoginRequest = new LoginRequest("unverified@example.com", "ValidPass123");
+    validLogoutRequest = new LogoutRequest("");
+    validRefreshRequest = new RefreshRequest("");
+  }
 
-        validLogoutRequest = new LogoutRequest("");
-        validRefreshRequest = new RefreshRequest("");
-    }
+  @Test
+  @WithAnonymousUser
+  void shouldReturn200WithTokensOnValidLogin() throws Exception {
+    TokenResponse expectedResponse =
+        new TokenResponse("access_token_abc", "refresh_token_xyz", "bearer", 3600);
+    when(authService.login(any(LoginRequest.class))).thenReturn(expectedResponse);
 
+    mockMvc
+        .perform(
+            post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(validLoginRequest)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.accessToken").value("access_token_abc"))
+        .andExpect(jsonPath("$.refreshToken").value("refresh_token_xyz"))
+        .andExpect(jsonPath("$.tokenType").value("bearer"))
+        .andExpect(jsonPath("$.expiresIn").value(3600));
 
-    @Test
-    @WithAnonymousUser
-    void shouldReturn200WithTokensOnValidLogin() throws Exception {
-        TokenResponse expectedResponse = new TokenResponse("access_token_abc", "refresh_token_xyz", "bearer", 3600);
-        when(authService.login(any(LoginRequest.class))).thenReturn(expectedResponse);
+    verify(authService, times(1)).login(any(LoginRequest.class));
+  }
 
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(validLoginRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("access_token_abc"))
-                .andExpect(jsonPath("$.refreshToken").value("refresh_token_xyz"))
-                .andExpect(jsonPath("$.tokenType").value("bearer"))
-                .andExpect(jsonPath("$.expiresIn").value(3600));
+  @Test
+  @WithAnonymousUser
+  void shouldReturn401WhenLoginFails() throws Exception {
+    when(authService.login(any(LoginRequest.class)))
+        .thenThrow(new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Invalid credentials"));
 
-         verify(authService, times(1)).login(any(LoginRequest.class));
-    }
+    mockMvc
+        .perform(
+            post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidLoginRequest)))
+        .andExpect(status().isUnauthorized()) // 401 for unauthorized
+        .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"));
 
+    verify(authService, times(1)).login(any(LoginRequest.class));
+  }
 
-    @Test
-    @WithAnonymousUser
-    void shouldReturn401WhenLoginFails() throws Exception {
-        when(authService.login(any(LoginRequest.class)))
-                 .thenThrow(new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Invalid credentials"));
+  @Test
+  @WithAnonymousUser
+  void shouldReturn401WhenUserNotVerified() throws Exception {
+    when(authService.login(any(LoginRequest.class)))
+        .thenThrow(new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED, "Email not verified"));
 
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidLoginRequest)))
-                .andExpect(status().isUnauthorized()) // 401 for unauthorized
-                .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"));
-
-         verify(authService, times(1)).login(any(LoginRequest.class));
-    }
-
-    @Test
-    @WithAnonymousUser
-    void shouldReturn401WhenUserNotVerified() throws Exception {
-         when(authService.login(any(LoginRequest.class)))
-                 .thenThrow(new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED, "Email not verified"));
-
-        mockMvc.perform(post("/api/auth/login")
+    mockMvc
+        .perform(
+            post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(unverifiedEmailLoginRequest)))
-                .andExpect(status().isUnauthorized()) // 401 for unauthorized
-                .andExpect(jsonPath("$.code").value("EMAIL_NOT_VERIFIED"));
+        .andExpect(status().isUnauthorized()) // 401 for unauthorized
+        .andExpect(jsonPath("$.code").value("EMAIL_NOT_VERIFIED"));
 
-         verify(authService, times(1)).login(any(LoginRequest.class));
-    }
+    verify(authService, times(1)).login(any(LoginRequest.class));
+  }
 }

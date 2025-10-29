@@ -5,10 +5,9 @@ import org.enumgum.dto.*;
 public interface AuthService {
   SignupResponse signup(SignupRequest request);
 
-    TokenResponse login(LoginRequest request);
+  TokenResponse login(LoginRequest request);
 
-    TokenResponse refresh(RefreshRequest req);
+  TokenResponse refresh(RefreshRequest req);
 
-    void logout(LogoutRequest req);
-
+  void logout(LogoutRequest req);
 }

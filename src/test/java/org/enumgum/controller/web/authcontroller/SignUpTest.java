@@ -79,13 +79,13 @@ public class SignUpTest {
     String body = objectMapper.writeValueAsString(validSignupRequest);
 
     when(authService.signup(any(SignupRequest.class)))
-        .thenThrow(new BusinessException(ErrorCode.EMAIL_IN_USE, "Email already in use and verified."));
+        .thenThrow(
+            new BusinessException(ErrorCode.EMAIL_IN_USE, "Email already in use and verified."));
 
     mockMvc
         .perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(body))
         .andExpect(status().isConflict())
-        .andExpect(
-            jsonPath("$.code").value("EMAIL_IN_USE"));
+        .andExpect(jsonPath("$.code").value("EMAIL_IN_USE"));
 
     verify(authService, times(1)).signup(any(SignupRequest.class));
   }

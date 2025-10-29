@@ -17,5 +17,4 @@ public enum ErrorCode {
   RESOURCE_CONFLICT,
 
   INVALID_REFRESH_TOKEN;
-
 }

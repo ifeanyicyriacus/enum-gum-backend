@@ -1,9 +1,8 @@
 package org.enumgum.repository;
 
+import jakarta.validation.constraints.NotBlank;
 import java.util.Optional;
 import java.util.UUID;
-
-import jakarta.validation.constraints.NotBlank;
 import org.enumgum.domain.model.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
