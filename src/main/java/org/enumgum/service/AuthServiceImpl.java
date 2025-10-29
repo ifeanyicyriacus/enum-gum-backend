@@ -104,12 +104,11 @@ public class AuthServiceImpl implements AuthService {
         String email = req.email();
         String password = req.password();
 
-        System.out.println("Hello i see you#############################################################3\n#################################################");
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Invalid credentials"));
 
         if (!user.getVerified()) {
-            throw new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Email not verified");//Email not verified
+            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED, "Email not verified");//Email not verified
         }
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Invalid credentials");

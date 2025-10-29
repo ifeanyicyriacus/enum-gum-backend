@@ -60,15 +60,16 @@ public class AuthControllerLoginTest {
     RefreshTokenRepository refreshTokenRepository;
 
     private LoginRequest validLoginRequest;
-    private LoginRequest invalidLoginRequest;
+    private LoginRequest  invalidLoginRequest;
+    private LoginRequest  unverifiedEmailLoginRequest;
     private LogoutRequest validLogoutRequest;
     private RefreshRequest validRefreshRequest;
-
 
     @BeforeEach
     void setUp() {
         validLoginRequest = new LoginRequest("newuser@example.com", "ValidPass123");
         invalidLoginRequest = new LoginRequest("nonexistent@example.com", "WrongPass123");
+        unverifiedEmailLoginRequest = new LoginRequest("unverified@example.com", "ValidPass123");
 
         validLogoutRequest = new LogoutRequest("");
         validRefreshRequest = new RefreshRequest("");
@@ -108,6 +109,21 @@ public class AuthControllerLoginTest {
                         .content(objectMapper.writeValueAsString(invalidLoginRequest)))
                 .andExpect(status().isUnauthorized()) // 401 for unauthorized
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"));
+
+         verify(authService, times(1)).login(any(LoginRequest.class));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void shouldReturn401WhenUserNotVerified() throws Exception {
+         when(authService.login(any(LoginRequest.class)))
+                 .thenThrow(new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED, "Email not verified"));
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(unverifiedEmailLoginRequest)))
+                .andExpect(status().isUnauthorized()) // 401 for unauthorized
+                .andExpect(jsonPath("$.code").value("EMAIL_NOT_VERIFIED"));
 
          verify(authService, times(1)).login(any(LoginRequest.class));
     }

@@ -115,6 +115,7 @@ public class GlobalExceptionHandler {
       case AUTHENTICATION_ERROR:
       case TOKEN_EXPIRED:
       case TOKEN_INVALID:
+      case EMAIL_NOT_VERIFIED:
         return HttpStatus.UNAUTHORIZED;
       case INSUFFICIENT_PRIVILEGE:
       case ACCESS_DENIED:
