@@ -10,8 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.enumgum.controller.web.AuthController;
 import org.enumgum.domain.error.ErrorCode;
 import org.enumgum.dto.LoginRequest;
-import org.enumgum.dto.LogoutRequest;
-import org.enumgum.dto.RefreshRequest;
 import org.enumgum.dto.TokenResponse;
 import org.enumgum.exception.BusinessException;
 import org.enumgum.repository.RefreshTokenRepository;
@@ -43,28 +41,18 @@ public class LoginTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
-  @MockitoBean private UserRepository userRepository;
-  @MockitoBean private PasswordEncoder passwordEncoder;
-
   @MockitoBean private AuthService authService;
   @MockitoBean private TokenProvider tokenProvider;
-
-  @MockitoBean RefreshTokenRepository refreshTokenRepository;
 
   private LoginRequest validLoginRequest;
   private LoginRequest invalidLoginRequest;
   private LoginRequest unverifiedEmailLoginRequest;
-  private LogoutRequest validLogoutRequest;
-  private RefreshRequest validRefreshRequest;
 
   @BeforeEach
   void setUp() {
     validLoginRequest = new LoginRequest("newuser@example.com", "ValidPass123");
     invalidLoginRequest = new LoginRequest("nonexistent@example.com", "WrongPass123");
     unverifiedEmailLoginRequest = new LoginRequest("unverified@example.com", "ValidPass123");
-
-    validLogoutRequest = new LogoutRequest("");
-    validRefreshRequest = new RefreshRequest("");
   }
 
   @Test

@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import org.enumgum.domain.error.ErrorCode;
+import org.enumgum.domain.model.RefreshToken;
 import org.enumgum.domain.model.VerificationToken;
 import org.enumgum.dto.*;
 import org.enumgum.entity.User;
@@ -143,15 +144,26 @@ public class AuthServiceImpl implements AuthService {
     return new TokenResponse(newAccess, newRefresh, "Bearer", 3600); // 1 hour in seconds
   }
 
-  @Override
-  public void logout(LogoutRequest req) {
-    if (!tokenProvider.validateToken(req.refreshToken())) return; // silent fail
-    Claims claims = tokenProvider.parseToken(req.refreshToken()).getBody();
-    UUID userId = UUID.fromString(claims.getSubject());
-    refreshTokenRepository.deleteByToken(req.refreshToken()); // simple delete
-  }
+//  public void logout(LogoutRequest req) {
+//    if (!tokenProvider.validateToken(req.refreshToken())) return; // silent fail
+//    Claims claims = tokenProvider.parseToken(req.refreshToken()).getBody();
+//    UUID userId = UUID.fromString(claims.getSubject());
+//    refreshTokenRepository.deleteByToken(req.refreshToken()); // simple delete
+//  }
 
-  // Helper method to generate verification token string
+    @Override
+    public void logout(String refreshToken) {
+        Optional<RefreshToken> tokenOpt = refreshTokenRepository.findByToken(refreshToken);
+
+        if (tokenOpt.isPresent()) {
+            RefreshToken tokenEntity = tokenOpt.get();
+            tokenEntity.setUsed(true);
+            refreshTokenRepository.save(tokenEntity);
+        }
+    }
+
+
+    // Helper method to generate verification token string
   // You might use the TokenProvider or just generate a random UUID string
   private String generateVerificationToken(UUID userId, String email) {
     // Option 1: Use TokenProvider (if adapted for verification tokens)
