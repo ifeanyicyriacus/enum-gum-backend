@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import io.jsonwebtoken.Claims;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.enumgum.domain.error.ErrorCode;
 import org.enumgum.domain.model.VerificationToken;
 import org.enumgum.dto.*;
@@ -21,17 +23,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional // Ensure database operations are atomic
+@AllArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-  @Autowired private UserRepository userRepository;
+  private UserRepository userRepository;
 
-  @Autowired private RefreshTokenRepository refreshTokenRepository;
+  private RefreshTokenRepository refreshTokenRepository;
 
-  @Autowired private VerificationTokenRepository verificationTokenRepository;
+  private VerificationTokenRepository verificationTokenRepository;
 
-  @Autowired private PasswordEncoder passwordEncoder;
+  private PasswordEncoder passwordEncoder;
 
-  @Autowired
   private TokenProvider tokenProvider; // Might be used for generating verification token string
 
   @Override
@@ -99,14 +101,18 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public TokenResponse login(LoginRequest req) {
-        User user = userRepository.findByEmail(req.email())
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Bad credentials"));
+        String email = req.email();
+        String password = req.password();
+
+        System.out.println("Hello i see you#############################################################3\n#################################################");
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Invalid credentials"));
 
         if (!user.getVerified()) {
-            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED, "Email not verified");
+            throw new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Email not verified");//Email not verified
         }
-        if (!passwordEncoder.matches(req.password(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Bad credentials");
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Invalid credentials");
         }
 
         String access  = tokenProvider.generateAccessToken(user.getId(), user.getEmail()/*, UUID.randomUUID(), "MEMBER"*/);
@@ -116,6 +122,7 @@ public class AuthServiceImpl implements AuthService {
                 refresh,
                 "Bearer",
                 3600); // 1 hour in seconds);
+
     }
 
     @Override
@@ -126,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
         Claims claims = tokenProvider.parseToken(req.refreshToken()).getBody();
         UUID userId   = UUID.fromString(claims.getSubject());
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Bad credentials"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Invalid credentials"));
 
 
         // rotate: same family, new iat/exp

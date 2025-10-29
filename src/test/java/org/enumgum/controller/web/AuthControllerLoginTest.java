@@ -1,12 +1,14 @@
 package org.enumgum.controller.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.enumgum.domain.error.ErrorCode;
 import org.enumgum.domain.model.RefreshToken;
 import org.enumgum.dto.LoginRequest;
 import org.enumgum.dto.LogoutRequest;
 import org.enumgum.dto.RefreshRequest;
 import org.enumgum.dto.TokenResponse;
 import org.enumgum.entity.User;
+import org.enumgum.exception.BusinessException;
 import org.enumgum.repository.RefreshTokenRepository;
 import org.enumgum.repository.UserRepository;
 import org.enumgum.security.JwtSecurityMockConfig;
@@ -58,6 +60,7 @@ public class AuthControllerLoginTest {
     RefreshTokenRepository refreshTokenRepository;
 
     private LoginRequest validLoginRequest;
+    private LoginRequest invalidLoginRequest;
     private LogoutRequest validLogoutRequest;
     private RefreshRequest validRefreshRequest;
 
@@ -65,6 +68,8 @@ public class AuthControllerLoginTest {
     @BeforeEach
     void setUp() {
         validLoginRequest = new LoginRequest("newuser@example.com", "ValidPass123");
+        invalidLoginRequest = new LoginRequest("nonexistent@example.com", "WrongPass123");
+
         validLogoutRequest = new LogoutRequest("");
         validRefreshRequest = new RefreshRequest("");
     }
@@ -91,8 +96,25 @@ public class AuthControllerLoginTest {
          verify(authService, times(1)).login(any(LoginRequest.class));
     }
 
+
     @Test
-    void shouldReturn403WhenEmailNotVerified() throws Exception {
+    @WithAnonymousUser
+    void shouldReturn401WhenLoginFails() throws Exception {
+        when(authService.login(any(LoginRequest.class)))
+                 .thenThrow(new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Invalid credentials"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidLoginRequest)))
+                .andExpect(status().isUnauthorized()) // 401 for unauthorized
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_ERROR"));
+
+         verify(authService, times(1)).login(any(LoginRequest.class));
+    }
+
+
+    @Test
+    void shouldReturn401WhenEmailNotVerified() throws Exception {
         String email = "unver@enumgum.com";
         userRepository.save(User.builder()
                 .email(email)
@@ -107,6 +129,9 @@ public class AuthControllerLoginTest {
                         .content(body))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("EMAIL_NOT_VERIFIED"));
+
+        verify(authService, times(1)).login(any(LoginRequest.class));
+
     }
 
     @Test
