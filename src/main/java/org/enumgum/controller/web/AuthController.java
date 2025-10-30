@@ -48,4 +48,10 @@ public class AuthController {
     }
     return ResponseEntity.noContent().build();
   }
+
+  @PostMapping("/verify-email")
+  public ResponseEntity<Void> verifyEmail(@RequestParam("token") String token) {
+    authService.verifyEmail(token);
+    return ResponseEntity.ok().build();
+  }
 }

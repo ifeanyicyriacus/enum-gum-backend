@@ -10,4 +10,6 @@ public interface AuthService {
   TokenResponse refresh(String refreshToken);
 
   void logout(String refreshToken);
+
+  void verifyEmail(String verificationToken);
 }

@@ -2,7 +2,6 @@ package org.enumgum.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
 import java.security.Key;
 import java.util.Date;
 import java.util.UUID;
@@ -68,21 +67,23 @@ public class JwtTokenProvider implements TokenProvider {
     }
   }
 
-  @Override
-  public String rotateRefreshToken(String oldRefreshToken) {
-    try {
-      Claims claims = parseToken(oldRefreshToken).getBody();
-      UUID userId = UUID.fromString(claims.getSubject());
-      UUID family = UUID.fromString(claims.get("family", String.class));
+  //  @Override
+  //  public String rotateRefreshToken(String oldRefreshToken) {
+  //    try {
+  //      Claims claims = parseToken(oldRefreshToken).getBody();
+  //      UUID userId = UUID.fromString(claims.getSubject());
+  //      UUID family = UUID.fromString(claims.get("family", String.class));
+  //
+  //      return generateRefreshToken(userId, family);
+  //    } catch (JwtException | IllegalArgumentException ex) {
+  //      throw new IllegalArgumentException("Invalid refresh token", ex);
+  //    }
+  //  }
 
-      return generateRefreshToken(userId, family);
-    } catch (JwtException | IllegalArgumentException ex) {
-      throw new IllegalArgumentException("Invalid refresh token", ex);
-    }
-  }
-
   @Override
-  public Jws<Claims> parseToken(String token) {
+  public Jws<Claims> parseToken(String token) /*throws
+          WeakKeyException, ExpiredJwtException, UnsupportedJwtException,
+          MalformedJwtException, SignatureException, IllegalArgumentException*/ {
     Key signingKey = Keys.hmacShaKeyFor(secret.getBytes());
     return Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token);
   }
@@ -100,12 +101,12 @@ public class JwtTokenProvider implements TokenProvider {
         .compact();
   }
 
-  @Override
-  public Claims getClaimsIfValid(String token)
-      throws ExpiredJwtException,
-          MalformedJwtException,
-          SignatureException,
-          UnsupportedJwtException {
-    return parseToken(token).getBody();
-  }
+  //  @Override
+  //  public Claims getClaimsIfValid(String token)
+  //      throws ExpiredJwtException,
+  //          MalformedJwtException,
+  //          SignatureException,
+  //          UnsupportedJwtException {
+  //    return parseToken(token).getBody();
+  //  }
 }

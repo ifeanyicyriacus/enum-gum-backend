@@ -55,7 +55,7 @@ public class AuthServiceImpl implements AuthService {
 
         // Regenerate verification token
         String newVerificationToken =
-            generateVerificationToken(existingUserToUpdate.getId(), email);
+            generateVerificationToken(/*existingUserToUpdate.getId(), email*/ );
         VerificationToken tokenEntity = new VerificationToken();
         tokenEntity.setToken(newVerificationToken);
         tokenEntity.setEmail(email);
@@ -82,10 +82,11 @@ public class AuthServiceImpl implements AuthService {
             .verified(false) // User is not verified initially
             .build();
 
-    User savedUser = userRepository.save(newUser);
+//    User savedUser = userRepository.save(newUser);
+    userRepository.save(newUser);
 
     // Generate verification token
-    String verificationToken = generateVerificationToken(savedUser.getId(), email);
+    String verificationToken = generateVerificationToken(/*savedUser.getId(), email*/ );
     VerificationToken tokenEntity = new VerificationToken();
     tokenEntity.setToken(verificationToken);
     tokenEntity.setEmail(email);
@@ -154,7 +155,7 @@ public class AuthServiceImpl implements AuthService {
     // Step 4: Validate the JWT string itself (signature, expiry)
     Claims claims;
     try {
-      claims = tokenProvider.getClaimsIfValid(refreshToken);
+      claims = tokenProvider.parseToken(refreshToken).getBody();
     } catch (ExpiredJwtException
         | MalformedJwtException
         | SignatureException
@@ -188,10 +189,10 @@ public class AuthServiceImpl implements AuthService {
     User user =
         userRepository
             .findById(userId)
-            //                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND,
-            // "User not found"));
             .orElseThrow(
-                () -> new BusinessException(ErrorCode.AUTHENTICATION_ERROR, "Invalid credentials"));
+                () ->
+                    new BusinessException(
+                        ErrorCode.TOKEN_INVALID, "Invalid or expired verification token"));
 
     // Step 8: Generate new access token
     String newAccessToken = tokenProvider.generateAccessToken(user.getId(), user.getEmail());
@@ -231,9 +232,48 @@ public class AuthServiceImpl implements AuthService {
     }
   }
 
+  @Override
+  public void verifyEmail(String verificationToken) {
+    // Step 1: Find the verification token entity by its string value
+    VerificationToken tokenEntity =
+        verificationTokenRepository
+            .findByToken(verificationToken)
+            .orElseThrow(
+                () ->
+                    new BusinessException(ErrorCode.TOKEN_INVALID, "Verification token not found"));
+
+    // Step 2: Check if the token is already used
+    if (tokenEntity.isUsed()) {
+      throw new BusinessException(
+          ErrorCode.TOKEN_REUSE_DETECTED, "Verification token already used");
+    }
+
+    // Step 3: Check if the token is expired
+    if (tokenEntity.getExpiresAt().isBefore(Instant.now())) {
+      throw new BusinessException(ErrorCode.TOKEN_EXPIRED, "Verification token expired");
+    }
+
+    // Step 4: Find the user associated with the token's email
+    User user =
+        userRepository
+            .findByEmail(tokenEntity.getEmail())
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        ErrorCode.TOKEN_INVALID, "Invalid or expired verification token"));
+
+    // Step 5: Update the user's verification status
+    user.setVerified(true); // Set verified flag to true
+    userRepository.save(user); // Save the updated user
+
+    // Step 6: Mark the verification token as used
+    tokenEntity.setUsed(true);
+    verificationTokenRepository.save(tokenEntity); // Save the updated token
+  }
+
   // Helper method to generate verification token string
   // You might use the TokenProvider or just generate a random UUID string
-  private String generateVerificationToken(UUID userId, String email) {
+  private String generateVerificationToken(/*UUID userId, String email*/ ) {
     // Option 1: Use TokenProvider (if adapted for verification tokens)
     // return tokenProvider.generateVerificationToken(userId, email); // Requires TokenProvider
     // change

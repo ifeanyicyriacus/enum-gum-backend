@@ -20,7 +20,7 @@ class TokenProviderTest {
 
   private final String email = "a@b.com";
   //  private final String role = "ADMIN";
-  private final UUID orgId = UUID.randomUUID();
+  //  private final UUID orgId = UUID.randomUUID();
   private final UUID userId = UUID.randomUUID();
   private final UUID familyId = UUID.randomUUID();
 
@@ -96,19 +96,19 @@ class TokenProviderTest {
     assertFalse(tokenProvider.validateToken(expiredToken));
   }
 
-  @Test
-  void shouldRotateRefreshToken() {
-    UUID family = UUID.randomUUID();
-    UUID userId = UUID.randomUUID();
-
-    ReflectionTestUtils.setField(tokenProvider, "secret", testSecret);
-
-    // original provider
-    String old = tokenProvider.generateRefreshToken(userId, family);
-    String neo = tokenProvider.rotateRefreshToken(old);
-
-    assertThat(neo).isNotEqualTo(old); // different string
-    assertThat(tokenProvider.validateToken(neo)).isTrue();
-    assertThat(tokenProvider.validateToken(old)).isTrue(); // old still valid (soft rotation)
-  }
+  //  @Test
+  //  void shouldRotateRefreshToken() {
+  //    UUID family = UUID.randomUUID();
+  //    UUID userId = UUID.randomUUID();
+  //
+  //    ReflectionTestUtils.setField(tokenProvider, "secret", testSecret);
+  //
+  //    // original provider
+  //    String old = tokenProvider.generateRefreshToken(userId, family);
+  //    String neo = tokenProvider.rotateRefreshToken(old);
+  //
+  //    assertThat(neo).isNotEqualTo(old); // different string
+  //    assertThat(tokenProvider.validateToken(neo)).isTrue();
+  //    assertThat(tokenProvider.validateToken(old)).isTrue(); // old still valid (soft rotation)
+  //  }
 }
