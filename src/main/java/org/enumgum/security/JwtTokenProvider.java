@@ -2,7 +2,6 @@ package org.enumgum.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
 import java.security.Key;
 import java.util.Date;
 import java.util.UUID;
@@ -25,7 +24,7 @@ public class JwtTokenProvider implements TokenProvider {
   private final AtomicLong counter = new AtomicLong();
 
   @Override
-  public String generateAccessToken(UUID userId, String email, UUID orgId, String role) {
+  public String generateAccessToken(UUID userId, String email /*, UUID orgId, String role*/) {
     Date now = new Date();
     Date expiryDate = Date.from(now.toInstant().plusSeconds(ACCESS_TOKEN_EXPIRY_SECONDS));
     Key signingKey = Keys.hmacShaKeyFor(secret.getBytes());
@@ -33,8 +32,8 @@ public class JwtTokenProvider implements TokenProvider {
     return Jwts.builder()
         .setSubject(userId.toString()) // Use user ID as the subject
         .claim("email", email) // Add email as a custom claim
-        .claim("org", orgId.toString())
-        .claim("role", role)
+        //        .claim("org", orgId.toString())
+        //        .claim("role", role)
         .setIssuedAt(now)
         .setExpiration(expiryDate)
         .signWith(signingKey, SignatureAlgorithm.HS512) // Use HS512
@@ -68,21 +67,23 @@ public class JwtTokenProvider implements TokenProvider {
     }
   }
 
-  @Override
-  public String rotateRefreshToken(String oldRefreshToken) {
-    try {
-      Claims claims = parseToken(oldRefreshToken).getBody();
-      UUID userId = UUID.fromString(claims.getSubject());
-      UUID family = UUID.fromString(claims.get("family", String.class));
+  //  @Override
+  //  public String rotateRefreshToken(String oldRefreshToken) {
+  //    try {
+  //      Claims claims = parseToken(oldRefreshToken).getBody();
+  //      UUID userId = UUID.fromString(claims.getSubject());
+  //      UUID family = UUID.fromString(claims.get("family", String.class));
+  //
+  //      return generateRefreshToken(userId, family);
+  //    } catch (JwtException | IllegalArgumentException ex) {
+  //      throw new IllegalArgumentException("Invalid refresh token", ex);
+  //    }
+  //  }
 
-      return generateRefreshToken(userId, family);
-    } catch (JwtException | IllegalArgumentException ex) {
-      throw new IllegalArgumentException("Invalid refresh token", ex);
-    }
-  }
-
   @Override
-  public Jws<Claims> parseToken(String token) {
+  public Jws<Claims> parseToken(String token) /*throws
+          WeakKeyException, ExpiredJwtException, UnsupportedJwtException,
+          MalformedJwtException, SignatureException, IllegalArgumentException*/ {
     Key signingKey = Keys.hmacShaKeyFor(secret.getBytes());
     return Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token);
   }
@@ -100,9 +101,12 @@ public class JwtTokenProvider implements TokenProvider {
         .compact();
   }
 
-  @Override
-  public Claims getClaimsIfValid(String token)
-      throws ExpiredJwtException, MalformedJwtException, SignatureException {
-    return parseToken(token).getBody();
-  }
+  //  @Override
+  //  public Claims getClaimsIfValid(String token)
+  //      throws ExpiredJwtException,
+  //          MalformedJwtException,
+  //          SignatureException,
+  //          UnsupportedJwtException {
+  //    return parseToken(token).getBody();
+  //  }
 }
